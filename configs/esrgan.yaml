@@ -1,0 +1,88 @@
+#### Training parameters #######################################################
+name: esrgan_face_sisr
+base_loss: least-squared-error
+seed: 999
+use_gpu: True
+
+data_workers: 2
+
+num_batches_train: 100000
+num_batches_val: 5
+num_epochs: 30
+batch_size: 4
+
+log_every_n_iters: 100
+render_every_n_iters: 100
+save_every_n_iters: 500
+
+#### Loss components ###########################################################
+total_variation: false
+perceptual: false
+content: false
+lp_coherence: false
+
+#### Loss coefficients #########################################################
+loss_weights:
+  adversarial_discriminator: 1.0
+  adversarial_generator: 1.0
+
+#### GAN architecture settings #################################################
+gan: BaseGan
+
+# Generator settings
+generator:
+  reconstructor:
+    block_def: [[2, 1], [2, 1]]
+    block_shapes: [[48, 48, 32], [48, 20, 10]]
+  optimizer:
+    type: Adam
+    args:
+      lr: 0.0002
+      betas:
+        - 0.5
+        - 0.9
+  scheduler: false
+  type: EsrganGenerator
+  weights: xavier_uniform
+  identity: none
+  train_every_n_iters: 1
+
+# Discriminator settings
+discriminator:
+  optimizer:
+    type: Adam
+    args:
+      lr: 0.0002
+      betas:
+        - 0.5
+        - 0.9
+  scheduler: false
+  type: EsrganDiscriminator
+  weights: xavier_uniform
+  train_every_n_iters: 5
+
+#### Data set settings #########################################################
+# Data properties (only informative for framework, does not enforce)
+normalization: [-1.0, 1.0]
+shape_originals: [3, 64, 64]
+shape_targets: [3, 256, 256]
+upsample_factor: 4
+
+# Data sources
+datasets:
+  train:
+    originals:
+      type: image-folder
+      args:
+        root: celeba
+      transforms: [normalize_8bit, scale_to_64]
+    targets:
+      type: image-folder
+      args:
+        root: celeba
+      transforms: [normalize_8bit, scale_to_256]
+
+#### Out directory settings #####################################################
+# Name of directory to save in1 command's output
+train_dir: experiments/
+test_dir: validation/

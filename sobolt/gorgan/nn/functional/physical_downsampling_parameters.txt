@@ -1,0 +1,21 @@
+Sentinel-2:
+    altitude: 760        # [Km]
+    Focal lenght: 0.6    # [m]
+    Aperture size: 0.150 # [m]
+    f-number: 4
+    resolution : 10      # [m]
+    wavelength-G: 0.4924 # [μm]
+    wavelength-B: 0.5598 # [μm]
+    wavelength-R: 0.6646 # [μm]
+    wavelength-I: 0.8328 # [μm]
+
+Superview:
+    altitude: 530        # [Km]
+    Focal length:10      # [m]
+    Aperture size: 0.625 # [m]
+    f-number: 16
+    resolution : 2       # [m]
+    wavelength-G: 0.485  # [μm]
+    wavelength-B: 0.555  # [μm]
+    wavelength-R: 0.660  # [μm]
+    wavelength-I: 0.830  # [μm]

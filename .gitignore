@@ -1,0 +1,12 @@
+__pycache__
+*val_imgs*
+*.egg-info
+.mypy_cache
+*checkpoints
+*report.txt
+*tensorboard
+report.*.txt
+logs
+venv
+.idea
+tags.*

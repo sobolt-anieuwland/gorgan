@@ -1,0 +1,27 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.4.0
+    hooks:
+    -   id: check-added-large-files
+    -   id: check-merge-conflict
+    -   id: check-case-conflict
+    -   id: check-ast
+        files: sobolt/
+    -   id: trailing-whitespace
+    -   id: mixed-line-ending
+    -   id: end-of-file-fixer
+
+-   repo: https://github.com/psf/black
+    rev: 19.3b0
+    hooks:
+    -   id: black
+        additional_dependencies: ['click==8.0.4']
+        files: sobolt/
+
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.790
+    hooks:
+    -   id: mypy
+        files: sobolt/

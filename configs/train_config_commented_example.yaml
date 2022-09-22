@@ -1,0 +1,248 @@
+# Introduction
+# -------------
+# This example configuration file documents which options are available for defining
+# a training run. When defining a real training configuration file, please copy it 
+# instead of directly modifying it.
+#
+# Table of contents
+# -----------------
+# 1. General training parameters
+# 2. Dataset settings
+# 3. Gan architecture settings
+
+
+# General training parameters
+# ---------------------------
+# To inherit configuration options from another configuration file, uncomment
+# the 'base' setting and specify the path to it. The path should be relative
+# to this file defining the setting. Any setting specified in both, the base
+# and this one, are overwritten by this one.
+# base: filename.yaml
+
+# Define the name of a run using this configuration file. It is used to name
+# logs directory with tensorboard and rendered images.
+name: example_train_config_documentation
+
+# Specify the size and amount of training batches. The size of the loaded dataset
+# is train_set_size = batch_size * num_batches_train and same for the val_set_size.
+# The length of a training run is defined by num_epochs. In case 'progressive_gan' is
+# set to true, each individual progressive training step is 'num_epochs' long.
+batch_size: 3
+num_batches_train: 5000
+num_batches_val: 9
+num_epochs: 30
+
+# Specify how many workers to start for loading data. Legal values are all positive
+# integers.
+data_workers: 7
+
+# Specify how many epochs must pass before saving the weights. Legal values are all
+# positive integers.
+save_epochs: 1
+
+# Specify how many iterations must pass for logging metrics to Tensorboard and saving
+# renders of generated data to disk. Valid values are all positive integers, although
+# specifying a size greater than the number of batches will lead to never logging and
+# rendering.
+log_every_n_iters: 100
+render_every_n_iters: 100
+
+# Define where the training and validation output is written to. A directory will be
+# created with the date and name specified above. Valid values are directory paths.
+# The train_dir will contain the logs directory of a training run. In here, a user can
+# find tensorboard, state dicts and renders made during training.
+# The val_dir will contain output of a test command. This can include rendered feature
+# maps, useful for inspecting, analyzing and understanding a
+# trained model.
+train_dir: experiments
+test_dir: validation
+
+# The range of values the source data is in.
+# WARNING: This is actually NOT used for by the GAN framework to normalize data to. It is
+# used by the validator for rendering purposes to know how to correctly denormalize
+# training and generated data.
+normalization: [0, 1]
+
+
+# Dataset settings
+# ----------------
+# In this section we specify which dataset to train on.
+# At the very least, a 'train' section must be present. Optionally, a 'validation' 
+# section, is also present. These may be the same or different.
+#
+# If the validatio section if left out, a subset randomly picked from the training set
+# will be used for validation purposes.
+#
+# When specifying the dataset directly, the 'originals' and 'targets' keys must be set
+# to specify the images from the original domain and the images from the targets domain.
+# For each of these, a 'type' (either 'random-latent-vector' or 'image-folder') must be
+# specified and an 'args' section with required parameters for that type of data.
+# Lastly, a series of preprocessing transforms can be defined in a list.
+
+datasets:
+  # Training section specifying that input is a random latent vector of length 100,
+  # to be rendered into an image of shape []
+  train:
+    originals:
+      type: random-latent-vector
+      args:
+        latent_length: 100
+
+    targets:
+      type: image-folder
+      args:
+        root: celeba
+      transforms: [normalize_8bit, scale_to_64] 
+
+  # Section specifying that we want to validate on the whole training set.
+  # We actually don't want this, so it is commented out. 
+  # validation:
+  #   originals:
+  #     type: random-latent-vector
+  #     args:
+  #       latent_length: 100
+
+  #   targets:
+  #     type: image-folder
+  #     args:
+  #       root: celeba
+  #     transforms: [normalize_8bit, scale_to_64] 
+
+# Shapes of datasets
+shape_originals: [100, 1, 1]
+shape_targets: [3, 64, 64]
+
+
+# GAN architecture settings
+# -------------------------
+# The very high-level GAN architecture to use. This impacts which networks take
+# part in the training and what components are available. Options:
+#
+# * BaseGan: A GAN with at its core a single generator and discriminator
+# * AdeGan: The GAN written specifically for the Artificial Data Enhancement
+#       project and used most for training SISR. Importantly, it has an extra
+#       'generator' used for cycle consistency. This can be one with learned
+#       parameters, but generally is one without (PhysicalDownsampling).
+#       Which Cycle to use is specified in the cycle section.
+# * CycleGan: A CycleGAN with 2 generators and discriminators, both learned,
+#       using cycle consistencies and identity losses.
+#       Which Cycle to use is specified in the cycle section.
+# * DummyGan: A class that does not train anything, but allows testing the data
+#       flow of the BaseTrainer.
+gan: BaseGan
+
+# Train progressively. What it means is defined by the graph.
+# Upsampling is performed at discrete steps after every num_epochs set, following
+# multiples of 2.
+# Example:
+# num_epochs: 3, init_prog_step: 1, upsample_factor: 4
+# The images will be upsampled by 2 for 3 epochs, then upsampled by 4 for other 3 epochs.
+upsample_factor: 1  # This decides how much to upsampling the pic if doing SISR - set 1 to disable
+
+# Specify the base loss function to use during training. Currently available options are:
+#  * minimax as formulated in GOODFELLOW et al, Generative Adversarial Networks
+#  * wasserstein as formulated in GULRAJANI et al, Improved Training of Wasserstein GANs
+#  * least-squared-error as formulated in MAO e.a. (2017), Least Squares Generative Adversarial Networks.
+base_loss: minimax
+
+# Extra loss components to optionally add to the total final loss.
+# Content, perceptual and ssim are meaninful only in supervised learning since they
+# require paired targets to be computed.
+total_variation: true # Enable using total variation loss.
+perceptual: false     # Enable using perceptual loss.
+content: false        # Enable using content loss.
+lp_coherence: false   # Enable using local phase coherence loss.
+ssim: false           # Enable using structural similarity loss.
+
+# Generator settings
+generator:
+  args:
+    # Specify graph args (i.e. architecture) - the below section differs per generator.
+    # To know which arguments are supported, check a generator's __init__ function. The
+    # generator graphs can be found in sobolt.gorgan.graphs.generators.
+    block_def: [[2, 1], [2, 1]]    # The number of upsampling blocks in reconstructor
+                                   # (upsampling_factor, RRDB)
+    block_shapes: [[48, 48, 32], [48, 20, 10]]    # The shape of feature layers per
+                                                  # block where ints reflect shapes as
+                                                  # (in, in, out)
+  optimizer:
+    type: Adam
+    args:
+      lr: 0.0002
+      betas:
+        - 0.5
+        - 0.999
+  # Choose generator network here, e.g. DcganGenerator, SimpleEsrganGenerator,
+  # LinearGenerator, UNet.
+  type: DcganGenerator
+
+  # How to initialize the weights for the generator. Can be 'none', 'random',
+  # 'xavier_normal', 'xavier_uniform', 'kaiming_uniform', 'kaiming_normal'
+  # or a path to a file of pretrained weights (a pth statedict).
+  weights: none
+  identity: NaiveDownsampler  # The network to use for the identity loss, ignored if not used
+
+# Discriminator settings
+discriminator:
+  optimizer:
+    type: Adam
+    args:
+      lr: 0.00002
+      betas:
+        - 0.5
+        - 0.999
+  # Choose generator network here, e.g. BaseCritic, DcganDiscriminator,
+  # PatchganDiscriminator, EsrganDiscriminator, LinearDiscriminator
+  type: DcganDiscriminator
+  weights: none  # Same options as for the generator
+
+# Multi discriminator settings
+# Adds an additional discriminators to the ADEGAN set up that tackles texture.
+# The set up is compatible with the cycle (must be enabled).
+# All settings are the same as found under the  discriminator settings.
+multi_discriminator:
+  d_loss_weight: 1.0
+  g_loss_weight: 1.0
+  texture:
+    shape_targets: [1, 512, 512]
+    discriminator:
+      lr_scheduler:
+        factor_decay: 1.0
+        type: cosine
+      optimizer:
+        type: Adam
+        args:
+          lr: 0.0001
+          betas:
+            - 0.0
+            - 0.999
+      scheduler: false
+      type: EsrganDiscriminator
+      weights: kaiming_normal
+      train_every_n_iters: 1
+
+# Cycle settings
+# Implementation of cycle Gan using 1 generator, 1 dicriminator and a downsampling
+# function. Calling G the generator, D the discriminator, Dw the downsampling function and
+# x and y the input and target images, the complete formula is:
+# L_cycle(G, Dw) = a * (b * mse(x, Dw(G(x))) + c * perceptual(y, G(Dw(y))))
+# with a, b, c weights for the total loss and the subcomponents.
+cycle:
+  optimizer:
+    type: Adam # TODO specify options
+    args:
+      lr: 0.00002
+      betas:
+        - 0.5
+        - 0.999
+  type: NaiveDownsampler  # TODO specify options
+  scheduler: false
+  identity_loss: false
+  # Backward weight refers to cycle component that compared the input image with the
+  # generated downsampld one. Forward weight refers to cycle component that compare the
+  # target image with the generated downsampled target image.
+  cycle_weight_backward: 1
+  cycle_weight_forward_perc: 1
+  cycle_weight_forward_ssim: 1
+  cycle_weight_total: 1
+  train_every_n_iters: 2
